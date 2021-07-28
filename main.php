@@ -16,17 +16,32 @@ if (empty($_SESSION['csrf_token'])) {
 	generate_token();
 }
 
+$session_now = time();
+if(isset($_SESSION['time'])){
+	if($session_now - $_SESSION['time'] > 60 * 60){
+		session_unset();
+		session_destroy();	
+	}
+}
+$_SESSION['time'] = time();
+
+/**
+ * Load default definitions;
+ * @since .0.0.1
+ */
+
+require_once(__DIR__ . '/conf.php');
+
 if($_SERVER['REQUEST_METHOD'] === 'POST'){
-	if (!empty($_POST['token']) && !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-		if (!hash_equals($_SESSION['token'], $_POST['token'])) {
+
+	if (empty($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
 			error_log("Request without csrf!");
-			error_log($_REQUEST);
-			header("HTTP/1.1 400");
+			header("HTTP/1.1 400 Bad Request");
 			_e("Operation denied!");
 			die();
-		}
-		generate_token();
 	}
+		generate_token();
+	
 }
 
 /**
@@ -47,12 +62,11 @@ function csrf_token(){
  }
 
 /**
- * Load default definitions;
+ * Initialize DB
  * @since 0.0.1
  */
 
-require_once(__dir__ . '/conf.php');
-require_once(__dir__ . '/initdb.php');
+require_once(__DIR__ . '/initdb.php');
 
 /**
  * render html.
@@ -73,9 +87,14 @@ require_once(__dir__ . '/initdb.php');
  * 		Load extra js files via url.
  * 		@type string
  * 		]
+ * @param bool $end If true, inserts end of html and exits
  */
 
-function _e($html, $args = null){
+function _e($html, $args = null, $end = false){
+	if($end){ 
+		require_once(__DIR__ . '/templates/footer.php');
+		die();
+	}
 	$title = $args && array_key_exists('title', $args) ? $args['title'] : 'Survey Tool';
 
 	require_once(__DIR__ . '/templates/header.php');
@@ -83,7 +102,6 @@ function _e($html, $args = null){
 		require_once(__DIR__ . '/templates/menu.php');
 	}
 	print('<div>' . $html . '</div>');
-	require_once(__DIR__ . '/templates/footer.php');
 
 }
 
@@ -134,6 +152,20 @@ function create_user($mail, $password, $first_name, $last_name, $level = 0){
 	}));
 }
 
+
+/**
+ *
+ * Update user.
+ *
+ * @since 0.0.1
+ * @param array $data
+ * @return bool True/False
+ */
+
+function update_user($userdata){
+	var_dump("Dummy");
+}
+
 /**
  *
  * Get user by mail.
@@ -148,7 +180,7 @@ function create_user($mail, $password, $first_name, $last_name, $level = 0){
  * 		@type string first_name
  * 		@type string last_name
  * 		} 
- * nulll on failure.
+ * null on failure.
  *
  */
 
@@ -168,6 +200,43 @@ function get_user($mail){
 	}));
 
 }
+
+/**
+ * Auth user.
+ *
+ * @since 0.0.1
+ *
+ * @param string $mail.
+ * @param string $password.
+ *
+ * @return boolean $valid True if validated
+ */
+
+function auth_user($mail, $password){
+	$user = get_user($mail);
+	if(!$user){ return false; }
+	
+	$auth = (sql(function($conn) use ($mail, $password){
+		$stmt = $conn->prepare("SELECT password FROM users WHERE mail like ?");
+		if($stmt){
+			$stmt->bind_param('s', $mail);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			$hash = $result->fetch_assoc()['password'];
+			return password_verify($password, $hash);
+		}
+		return false;
+	}));
+
+	if($auth){
+		$_SESSION['mail'] = $mail;
+		$_SESSION['level'] = $user['level'];
+		$_SESSION['user_id'] = $user['id'];
+		return true;
+	}
+	return false;
+}
+
 
 /**
  *
@@ -256,5 +325,4 @@ function get_survey($name){
 		return null;
 	}));
 }
-
 

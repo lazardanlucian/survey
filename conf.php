@@ -1,5 +1,7 @@
 <?php
 
+define( 'ABSPATH', dirname( __FILE__ ) . '/' );
+
 $defaults = array(
 	'PROGPATH'=>'/survey',
 	'DBNAME' => 'survey',
@@ -8,8 +10,8 @@ $defaults = array(
 	'DBHOST' => '127.0.0.1',
        	'DBPORT' => null);
 
-if(file_exists('../../survey.json')){
-	$cfgfile = json_decode(file_get_contents('../../survey.json'));
+if(file_exists(ABSPATH . '/../../survey.json')){
+	$cfgfile = json_decode(file_get_contents(ABSPATH . '/../../survey.json'));
 	$loadcfg=true;
 	foreach($defaults as $key =>$value){
 		if(!array_key_exists($key, $cfgfile)){
@@ -41,5 +43,5 @@ foreach($defaults as $key => $value){
  *  	}
  */
 function save_config($arr){
-	file_put_contents('../../survey.json', json_encode($arr, true));
+	file_put_contents(ABSPATH . '/../../survey.json', json_encode($arr, true));
 }
