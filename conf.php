@@ -29,6 +29,8 @@ foreach($defaults as $key => $value){
 /**
  * Save config.
  *
+ * @since 0.0.1
+ *
  * @param array $arr {
  *  	@type string $PROGPATH
  *  	@type string $DBNAME
@@ -41,4 +43,3 @@ foreach($defaults as $key => $value){
 function save_config($arr){
 	file_put_contents('../../survey.json', json_encode($arr, true));
 }
-
