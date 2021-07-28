@@ -31,34 +31,24 @@ sql(function($conn){
 			description VARCHAR(1024) NOT NULL,
 			max_entries INT NOT NULL,
 			report_at INT NOT NULL,
-			fields MEDIUMTEXT NOT NULL,
-			status INT NOT NULL
+			status INT NOT NULL,
+			fields MEDIUMTEXT NOT NULL
 			)');
 		$stmt->execute();
 	}
-
-	$stmt = $conn->prepare('SELECT id from surveys LIMIT 1');
-	$stmt->execute();
-	$result = $stmt->get_result();
-	$survey = $result->fetch_assoc();
-	if(!isset($survey['id'])){
-		$stmt = $conn->prepare('INSERT INTO surveys (name, description, max_entries, report_at, fields, status) VALUES (
-			"example-survey",
-			"A predefined survey",
-			20000,
-			100, ?, 1)');
-		$fields = json_encode(array(
-			'First Name' => 'input', 
-			'Choose one' => array( 'dropdown' => ['one','two','three'])
-		), true)  ;
-		$stmt->bind_param('s', $fields);
-		$stmt->execute();
-	}
-	$stmt->close();
 });
 
 
 if(!get_user('admin@localhost')){
 	create_user('admin@localhost', 'password', 'admin', 'local', 1);
+}
+
+if(!get_survey('sample_survey')){
+	create_survey('sample_survey', 'some_description', 20, 20, 1, array(
+		array('name'=>'Name', 'type'=>'input', 'required'=>true, 'label'=>'name'),
+		array('name'=>'Color', 'type'=>'checkbox', 'required'=>false, 'options'=>['blue','green','yellow']),
+		array('name'=>'Year', 'type'=>'year', 'required'=>false, 'store'=>'int'),
+		array('name'=>'Pick', 'type'=>'dropdown', 'required'=>true, 'options'=>['Yes','No','Maybe'])
+	));
 }
 
