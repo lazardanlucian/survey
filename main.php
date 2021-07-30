@@ -6,16 +6,19 @@
  * @version 0.0.1
  */
 
+
 /**
- * csrf protection
+ * Require Function defs.
+ */
+require_once __DIR__ . '/main_functions.php';
+
+/**
+ * Load default definitions;
  *
- * @since 0.0.1
+ * @since .0.0.1
  */
 
-session_start();
-if (empty($_SESSION['csrf_token'])) {
-    generate_token();
-}
+require_once __DIR__ . '/conf.php';
 
 /**
  * Initialize DB
@@ -26,9 +29,15 @@ if (empty($_SESSION['csrf_token'])) {
 require_once __DIR__ . '/initdb.php';
 
 /**
- * Require Function defs.
+ * csrf protection
+ *
+ * @since 0.0.1
  */
-require_once __DIR__ . '/main_functions.php';
+
+session_start();
+if (empty($_SESSION['csrf_token'])) {
+    generate_token();
+}
 
 /**
  * Session auto-expire
@@ -43,14 +52,6 @@ if (isset($_SESSION['time'])) {
     }
 }
 $_SESSION['time'] = time();
-
-/**
- * Load default definitions;
- *
- * @since .0.0.1
- */
-
-require_once __DIR__ . '/conf.php';
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
