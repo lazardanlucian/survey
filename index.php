@@ -3,9 +3,9 @@
 require_once(__DIR__ . '/main.php');
 
 _e("Hello!", array(
-	'title'=>'Main Page',
+    'title' => 'Main Page',
 ));
 
 _e("Hello2");
 
-_e(null,null,true);
+_e(null, null, true);

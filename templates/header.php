@@ -21,18 +21,19 @@
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
   <link rel="stylesheet" href="<?php echo PROGPATH; ?>/css/normalize.css">
   <link rel="stylesheet" href="<?php echo PROGPATH; ?>/css/skeleton.css">
-  <?php
-  	if(isset($args['css'])){
-		foreach($args['css'] as $csspath){
-			printf('<link rel="stylesheet" href="%1$s">',$csspath);
-		}
-	}
-	if(isset($args['js'])){
-		foreach($args['js'] as $jspath){
-			printf('<script src="%1$s"></script>', $jspath);
-		}
-	}
-  ?>
+    <?php
+    if (isset($args['css'])) {
+        foreach ($args['css'] as $csspath) {
+            printf('<link rel="stylesheet" href="%1$s">', $csspath);
+        }
+    }
+
+    if (isset($args['js'])) {
+        foreach ($args['js'] as $jspath) {
+            printf('<script src="%1$s"></script>', $jspath);
+        }
+    }
+    ?>
 
 
   <!-- Favicon
