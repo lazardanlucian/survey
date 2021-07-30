@@ -6,19 +6,25 @@
  * @version 0.0.1
  */
 
+/**
+ * Abspath
+ *
+ * @since 0.0.1
+ */
+require_once(__DIR__ . '/abspath.php');
+
+/**
+ * Load default definitions;
+ *
+ * @since 0.0.1
+ */
+require_once __DIR__ . '/conf.php';
 
 /**
  * Require Function defs.
  */
 require_once __DIR__ . '/main_functions.php';
 
-/**
- * Load default definitions;
- *
- * @since .0.0.1
- */
-
-require_once __DIR__ . '/conf.php';
 
 /**
  * Initialize DB

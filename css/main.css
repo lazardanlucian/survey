@@ -1,0 +1,19 @@
+#password_update {
+    display: none;
+}
+
+#password_update:checked + label {
+    display: none;
+}
+
+#password_update:checked ~ div {
+    display: none;
+}
+
+.change_password {
+    display: none;
+}
+
+#password_update:checked ~ .change_password {
+    display: inherit;
+}

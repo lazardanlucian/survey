@@ -3,6 +3,7 @@
   <?php if (!isset($_SESSION['level'])) { ?>
   <a href="<?php echo PROGPATH; ?>/app/login">Login</a>
   <?php } else { ?>
-  <a href="<?php echo PROGPATH; ?>/app/logout">Logout</a>
+    <a href="<?php echo PROGPATH; ?>/app/logout">Logout</a>
+  <a href="<?php echo PROGPATH; ?>/app/settings">Settings</a>
   <?php } ?>
 </div>

@@ -21,6 +21,7 @@
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
   <link rel="stylesheet" href="<?php echo PROGPATH; ?>/css/normalize.css">
   <link rel="stylesheet" href="<?php echo PROGPATH; ?>/css/skeleton.css">
+  <link rel="stylesheet" href="<?php echo PROGPATH; ?>/css/main.css">
     <?php
     if (isset($args['css'])) {
         foreach ($args['css'] as $csspath) {

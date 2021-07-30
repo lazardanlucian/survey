@@ -1,5 +1,5 @@
 <?php
-require '../..' . '/main.php';
+require_once('../..' . '/main.php');
 
 if (isset($_POST['mail']) && isset($_POST['password'])) {
     auth_user($_POST['mail'], $_POST['password']);
@@ -7,7 +7,13 @@ if (isset($_POST['mail']) && isset($_POST['password'])) {
 
 if (isset($_POST['new_password']) && isset($_POST['repeat_password'])) {
     if ($_POST['new_password'] === $_POST['repeat_password']) {
-        update_user(array('password' => $_POST['new_password']));
+        if (update_user(array('password' => $_POST['new_password']))) {
+            _e('Password Updated!');
+        } else {
+            _e('Password not updated!');
+        }
+    } else {
+        _e('Passwords do not match!');
     }
 }
 
@@ -16,7 +22,7 @@ if (isset($_SESSION['mail'])) {
     _e(sprintf('Welcome, %1$s!', $user['first_name']));
     if (auth_user($_SESSION['mail'], 'password')) {
         ob_start(); ?>
-       <p>Please change admin password!</p>
+       <p>Please change default password!</p>
        <form method="POST">
         <label for="new_password">New Password:</label><input type="pasword" name="new_password" />
         <label for="new_password">Repeat Password:</label><input type="pasword" name="repeat_password" />
@@ -24,8 +30,9 @@ if (isset($_SESSION['mail'])) {
         <button type="submit">Update</button>
        </form>
         <?php _e(ob_get_clean());
-        _e(null, null, true);
+        _end();
     }
+    _end();
 }
 
 ob_start(); ?>
@@ -41,6 +48,6 @@ ob_start(); ?>
 
 <?php
 _e(ob_get_clean());
-_e(null, null, true);
+_end();
 ?>
 

@@ -8,4 +8,4 @@ _e("Hello!", array(
 
 _e("Hello2");
 
-_e(null, null, true);
+_end();

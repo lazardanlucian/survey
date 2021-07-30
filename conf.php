@@ -1,26 +1,17 @@
 <?php
 
-$defaults = array(
-    'PROGPATH' => '/survey',
-    'DBNAME' => 'survey',
-    'DBUSER' => 'survey',
-    'DBPASS' => 'survey',
-    'DBHOST' => '127.0.0.1',
-           'DBPORT' => null);
+$progpath = '/survey';
+$dbname = 'survey';
+$dbuser = 'survey';
+$dbpass = 'survey';
+$dbhost = '127.0.0.1';
+$dbport = null;
 
 if (file_exists(ABSPATH . '/../../survey.json')) {
-    $cfgfile = json_decode(file_get_contents(ABSPATH . '/../../survey.json'));
-    $loadcfg = true;
-    foreach ($defaults as $key => $value) {
-        if (!array_key_exists($key, $cfgfile)) {
-            $loadcfg = false;
+    $cfgfile = json_decode(file_get_contents(ABSPATH . '/../../survey.json'), 1);
+    foreach ($cfgfile as $definition => $value) {
+        if (isset(${strtolower($definition)})) {
+            ${strtolower($definition)} = $value;
         }
     }
-    if ($loadcfg) {
-        $defaults = $cfgfile;
-    }
-}
-
-foreach ($defaults as $key => $value) {
-    define($key, $value);
 }

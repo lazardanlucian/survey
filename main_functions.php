@@ -1,5 +1,12 @@
 <?php
 
+define('PROGPATH', $progpath);
+define('DBNAME', $dbname);
+define('DBUSER', $dbuser);
+define('DBPASS', $dbpass);
+define('DBHOST', $dbhost);
+define('DBPORT', $dbport);
+
 /**
  * Output csrf token
  *
@@ -42,12 +49,8 @@ function generate_token()
  * @param bool   $end  If true, inserts end of html and exits
  */
 
-function _e($html, $args = null, $end = false)
+function _e($html, $args = null)
 {
-    if ($end) {
-        include_once __DIR__ . '/templates/footer.php';
-        die();
-    }
     $title = $args && array_key_exists('title', $args) ? $args['title'] : 'Survey Tool';
 
     include_once __DIR__ . '/templates/header.php';
@@ -57,6 +60,18 @@ function _e($html, $args = null, $end = false)
     print('<div>' . $html . '</div>');
 }
 
+/**
+ * End output with footer.
+ *
+ * @since 0.0.1
+ *
+ * @return void
+ */
+function _end()
+{
+    include_once __DIR__ . '/templates/footer.php';
+    die();
+}
 
 
 
@@ -121,7 +136,49 @@ function create_user($mail, $password, $first_name, $last_name, $level = 0)
 
 function update_user($userdata)
 {
-    var_dump("Dummy");
+    $predefined = array(
+        'mail' => 's',
+        'password' => 's',
+        'first_name' => 's',
+        'last_name' => 's',
+        'level' => 'i'
+    );
+
+    if (is_array($userdata) && !empty($userdata) && isset($_SESSION['user_id'])) {
+        $query = "UPDATE users SET ";
+        $binds = "";
+        $params = array();
+        foreach ($userdata as $key => $value) {
+            if (array_key_exists($key, $predefined)) {
+                $query .= $key . '=?, ';
+                $binds .= $predefined[$key];
+                if ($key == 'password') {
+                    $value = password_hash($value, PASSWORD_DEFAULT);
+                }
+                array_push($params, $value);
+            }
+        }
+
+        /** remove last comma and space */
+        $query = substr($query, 0, -2);
+        $query .= " WHERE id=?";
+        array_push($params, $_SESSION['user_id']);
+        $binds .= "i";
+
+        return sql(function ($conn) use ($query, $binds, $params) {
+            $stmt = $conn->prepare($query);
+            if ($stmt) {
+                $stmt->bind_param($binds, ...$params);
+                $stmt->execute();
+                $stmt->close();
+                return true;
+            }
+
+            return false;
+        });
+    }
+
+    return false;
 }
 
 /**
@@ -129,7 +186,7 @@ function update_user($userdata)
  *
  * @since 0.0.1
  *
- * @param string $mail.
+ * @param string $mail Optional, current user if not specified.
  *
  * @return array $user {
  * @type   int id
@@ -140,8 +197,12 @@ function update_user($userdata)
  * null on failure.
  */
 
-function get_user($mail)
+function get_user($mail = null)
 {
+    if (!$mail) {
+        $mail = $_SESSION['mail'];
+    }
+
     return(sql(
         function ($conn) use ($mail) {
             $stmt = $conn->prepare(
@@ -325,6 +386,3 @@ function save_config($arr)
 {
     file_put_contents(ABSPATH . '/../../survey.json', json_encode($arr, true));
 }
-
-
-define('ABSPATH', dirname(__FILE__) . '/');
