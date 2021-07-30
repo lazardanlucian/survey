@@ -26,22 +26,75 @@ sql(
 
         $stmt->close();
 
-        $stmt = $conn->prepare('SELECT id from surveys WHERE LIMIT 1');
+        $stmt = $conn->prepare('SELECT id from surveys LIMIT 1');
 
         if (!$stmt) {
             $stmt = $conn->prepare(
                 'CREATE TABLE surveys (
 			id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+            id_canonical INT NOT NULL,
 			name VARCHAR(256) NOT NULL,
-			description VARCHAR(1024) NOT NULL,
+			description VARCHAR(1024),
 			max_entries INT NOT NULL,
 			report_at INT NOT NULL,
 			status INT NOT NULL,
-			fields MEDIUMTEXT NOT NULL
+			fields TEXT NOT NULL
 			)'
             );
             $stmt->execute();
         }
+
+        $stmt->close();
+
+        $stmt = $conn->prepare('SELECT id from canonicals LIMIT 1');
+
+        if (!$stmt) {
+            $stmt = $conn->prepare(
+                'CREATE TABLE canonicals (
+			id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+            name VARCHAR(256) NOT NULL UNIQUE
+			)'
+            );
+            $stmt->execute();
+        }
+        $stmt->close();
+
+        $stmt = $conn->prepare('SELECT id from fields LIMIT 1');
+
+        if (!$stmt) {
+            $stmt = $conn->prepare(
+                'CREATE TABLE fields (
+			id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+            name VARCHAR(256) NOT NULL,
+            label VARCHAR(256) NOT NULL,
+            description VARCHAR(256),
+            type VARCHAR(256) NOT NULL,
+            options TEXT,
+            required BOOLEAN NOT NULL DEFAULT FALSE
+			)'
+            );
+            $stmt->execute();
+        }
+
+        $stmt->close();
+
+        $stmt = $conn->prepare('SELECT id from submissions LIMIT 1');
+
+        if (!$stmt) {
+            $stmt = $conn->prepare(
+                'CREATE TABLE submissions (
+			id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+            id_survey INT NOT NULL,
+            id_canonical INT NOT NULL,
+            id_field INT NOT NULL,
+            original VARCHAR(256) NOT NULL,
+			value TEXT NOT NULL
+			)'
+            );
+            $stmt->execute();
+        }
+
+        $stmt->close();
     }
 );
 
@@ -50,18 +103,58 @@ if (!get_user('admin@localhost')) {
     create_user('admin@localhost', 'password', 'admin', 'local', 1);
 }
 
-if (!get_survey('sample_survey')) {
+if (!get_canonical('sample_link')) {
+    create_canonical('sample_link');
+}
+
+if (!get_field(1)) {
+    create_field(
+        'Name',
+        'Name',
+        '',
+        'input',
+        true
+    );
+}
+
+if (!get_field(2)) {
+    create_field(
+        'checkbox',
+        'Select any of the following:',
+        '',
+        'checkbox',
+        false,
+        array(
+            'Option 1',
+            'Option 2',
+            'Option 3'
+        )
+    );
+}
+
+if (!get_field(3)) {
+    create_field(
+        'Color',
+        'Select a color:',
+        '',
+        'dropdown',
+        array(
+            'Red',
+            'Green',
+            'Blue'
+        ),
+        false
+    );
+}
+
+if (!get_survey('sample survey')) {
     create_survey(
-        'sample_survey',
+        1,
+        'sample survey',
         'some_description',
         20,
         20,
         1,
-        array(
-            array('name' => 'Name', 'type' => 'input', 'required' => true, 'label' => 'name'),
-            array('name' => 'Color', 'type' => 'checkbox', 'required' => false, 'options' => ['blue','green','yellow']),
-            array('name' => 'Year', 'type' => 'year', 'required' => false, 'store' => 'int'),
-            array('name' => 'Pick', 'type' => 'dropdown', 'required' => true, 'options' => ['Yes','No','Maybe'])
-        )
+        array(1,2,3)
     );
 }

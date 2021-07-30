@@ -216,7 +216,6 @@ function get_user($mail = null)
                 $stmt->close();
                 return $user;
             }
-            _e(var_export($conn->error, 1));
             return null;
         }
     ));
@@ -263,6 +262,148 @@ function auth_user($mail, $password)
     return false;
 }
 
+/**
+ * Create field.
+ *
+ * Saves a new field link in db.
+ *
+ * @since 0.0.1
+ *
+ * @param string @name
+ * @param string @label
+ * @param string @description
+ * @param string @type
+ * @param string @required Optional, default false, if the field is compulsory;
+ *
+ * @return int $id on success, null on failure
+ */
+function create_field($name, $label, $description, $type, $required = false, $options = null)
+{
+    return sql(
+        function ($conn) use ($name, $label, $description, $type, $required, $options) {
+            if ($options) {
+                $stmt = $conn->prepare("INSERT INTO fields (name, label, description, type, required, options) 
+                VALUES ( ?,?,?,?,?,? )");
+            } else {
+                $stmt = $conn->prepare("INSERT INTO fields (name, label, description, type, required) 
+                VALUES ( ?,?,?,?,? )");
+            }
+            if ($stmt) {
+                if ($options) {
+                    $json_options = json_encode($options, true);
+                    $stmt->bind_param(
+                        'ssssis',
+                        $name,
+                        $label,
+                        $description,
+                        $type,
+                        $required,
+                        $json_options
+                    );
+                } else {
+                    $stmt->bind_param('ssssi', $name, $label, $description, $type, $required);
+                }
+                $stmt->execute();
+                $lastid = $stmt->insert_id;
+                $stmt->close();
+                return $lastid;
+            }
+
+            $stmt->close();
+            return null;
+        }
+    );
+}
+
+/**
+ * Get field.
+ *
+ * @since 0.0.1
+ *
+ * @param string @id
+ *
+ * @return array Null on failure
+ */
+function get_field($id)
+{
+    return sql(
+        function ($conn) use ($id) {
+            $stmt = $conn->prepare("SELECT id, name, label, description, type, required, options
+            FROM fields WHERE id = ?");
+            if ($stmt) {
+                $stmt->bind_param('i', $id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $field = $result->fetch_assoc();
+                if ($field) {
+                    $field['options'] = json_decode($field['options'], true);
+                }
+                $stmt->close();
+                return $field;
+            }
+            $stmt->close();
+            return null;
+        }
+    );
+}
+
+/**
+ * Create canonical.
+ *
+ * Saves a new canonical link in db.
+ *
+ * @since 0.0.1
+ *
+ * @param string @name
+ *
+ * @return int $id on success, null on failure
+ */
+function create_canonical($name)
+{
+    return sql(
+        function ($conn) use ($name) {
+            $stmt = $conn->prepare("INSERT INTO canonicals (name) VALUES ( ? )");
+            if ($stmt) {
+                $stmt->bind_param('s', $name);
+                $stmt->execute();
+                $lastid = $stmt->insert_id;
+                $stmt->close();
+                return $lastid;
+            }
+            $stmt->close();
+            return null;
+        }
+    );
+}
+
+/**
+ * Get canonical.
+ *
+ * @since 0.0.1
+ *
+ * @param string @name
+ *
+ * @return array {id}
+ */
+function get_canonical($name)
+{
+    return sql(
+        function ($conn) use ($name) {
+            $stmt = $conn->prepare("SELECT id FROM canonicals WHERE name = ?");
+            if ($stmt) {
+                $stmt->bind_param('s', $name);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $canonical = $result->fetch_assoc();
+                $stmt->close();
+                return $canonical;
+            }
+            $stmt->close();
+            return null;
+        }
+    );
+}
+
 
 /**
  * Create Survey.
@@ -279,58 +420,31 @@ function auth_user($mail, $password)
  * @return int $id on succes, null on failure.
  */
 
-function create_survey($name, $description, $max_entries, $report_at, $status, $fields)
+function create_survey($id_canonical, $name, $description, $max_entries, $report_at, $status, $fields)
 {
-    $survey_id = sql(
-        function ($conn) use ($name, $description, $max_entries, $report_at, $status, $fields) {
+    return sql(
+        function ($conn) use ($id_canonical, $name, $description, $max_entries, $report_at, $status, $fields) {
             $stmt = $conn->prepare(
-                "INSERT INTO surveys (name, description, max_entries, report_at, status, fields) 
-                VALUES (?, ?, ?, ?, ?, ?)"
+                "INSERT INTO surveys (id_canonical, name, description, max_entries, report_at, status, fields) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
             if ($stmt) {
                 $json_fields = json_encode($fields, 1);
-                $stmt->bind_param('ssiiis', $name, $description, $max_entries, $report_at, $status, $json_fields);
+                $stmt->bind_param(
+                    'issiiis',
+                    $id_canonical,
+                    $name,
+                    $description,
+                    $max_entries,
+                    $report_at,
+                    $status,
+                    $json_fields
+                );
                 $stmt->execute();
                 $lastid = $stmt->insert_id;
                 $stmt->close();
                 return $lastid;
             }
-            return null;
-        }
-    );
-
-    if (!$survey_id) {
-        return null;
-    }
-
-    $surveyfields = sql(
-        function ($conn) use ($survey_id, $fields) {
-            $prepare = "CREATE TABLE survey_$survey_id ( id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,";
-            $prepare .= join(
-                ',',
-                array_map(function ($i) {
-                            $type = " VARCHAR(254)";
-
-                    if (isset($i['store']) && $i['store'] === 'int') {
-                            $type = " INT";
-                    }
-
-                    if (isset($i['required']) && $i['required']) {
-                            $type .= " NOT NULL";
-                    }
-
-                    return $i['name'] . $type;
-                }, $fields)
-            );
-            $prepare .= ")";
-
-            $stmt = $conn->prepare($prepare);
-            if ($stmt) {
-                 $stmt->execute();
-                 $stmt->close();
-                 return true;
-            }
-            var_dump($conn->error);
             return null;
         }
     );
@@ -351,7 +465,8 @@ function get_survey($name)
     return(sql(
         function ($conn) use ($name) {
             $stmt = $conn->prepare(
-                "SELECT id, name, description, max_entries, report_at, status, fields FROM surveys WHERE name like ?"
+                "SELECT id, id_canonical, name, description, max_entries, report_at, status, fields 
+                FROM surveys WHERE name like ?"
             );
             if ($stmt) {
                 $stmt->bind_param('s', $name);
@@ -359,10 +474,11 @@ function get_survey($name)
                 $result = $stmt->get_result();
                 $survey = $result->fetch_assoc();
                 $stmt->close();
-                $survey['fields'] = json_decode($survey['fields'], 1);
-                return $survey;
+                if ($survey) {
+                    $survey['fields'] = json_decode($survey['fields'], 1);
+                    return $survey;
+                }
             }
-            _e(var_export($conn->error, 1));
             return null;
         }
     ));
