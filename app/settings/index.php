@@ -32,7 +32,7 @@ ob_start();
     <input type="password" name="new_password" id="new_password" />
     <label for="repeat_password">Repeat Password: </label>
     <input type="password" name="repeat_password" id="repeat_password" />
-    <input type="checkbox" id="password_update"><label for="password_update"><a nohref>Change Password</a></label><br>
+    <label for="password_update"><a nohref>Back</a></label><br>
     <button type="submit">Update Password</button>
     </div>
     <?php csrf_token(); ?>
