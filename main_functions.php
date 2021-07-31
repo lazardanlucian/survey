@@ -538,6 +538,85 @@ function get_survey($name)
     ));
 }
 
+
+/**
+ * Get Surveys
+ *
+ * @since 0.0.1
+ *
+ * @param string $search Optional. If not set, retrieve all.
+ *
+ * @return mixed $survey array of survey arrays.
+ */
+
+function get_surveys($search = null)
+{
+    if (!$search) {
+        $search = "%%";
+    } else {
+        $search = '%' . mb_strtolower($search) . '%';
+    }
+    return(sql(
+        function ($conn) use ($search) {
+            $stmt = $conn->prepare(
+                "SELECT surveys.id, id_canonical, name, description, max_entries, report_at, status, fields, url
+                FROM surveys LEFT JOIN canonicals on id_canonical = canonicals.id
+                WHERE name like LOWER(?)
+                OR description like LOWER(?)"
+            );
+            if ($stmt) {
+                $stmt->bind_param('ss', $search, $search);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                while ($survey = $result->fetch_assoc()) {
+                    $surveys[] = $survey;
+                }
+                $stmt->close();
+                if (!empty($surveys)) {
+                    return($surveys);
+                }
+            }
+            return null;
+        }
+    ));
+}
+
+/**
+ * Get Submissions
+ *
+ * @since 0.0.1
+ *
+ * @param int $survey_id if of survey.
+ *
+ * @return mixed $submissions array of submissions.
+ */
+
+function get_submissions($survey_id)
+{
+    return(sql(
+        function ($conn) use ($survey_id) {
+            $stmt = $conn->prepare(
+                "SELECT id, id_canonical, id_field, original, value 
+                FROM submissions WHERE name id = ?"
+            );
+            if ($stmt) {
+                $stmt->bind_param('i', $survey_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $result = $stmt->get_result();
+                while ($submission = $result->fetch_assoc()) {
+                    $submissions[] = $submission;
+                }
+                $stmt->close();
+                if (!empty($submissions)) {
+                    return($submissions);
+                }
+            }
+            return null;
+        }
+    ));
+}
+
 /**
  * Get Survey by id.
  *
