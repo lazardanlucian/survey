@@ -52,7 +52,7 @@ sql(
             $stmt = $conn->prepare(
                 'CREATE TABLE canonicals (
 			id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
-            name VARCHAR(256) NOT NULL UNIQUE
+            url VARCHAR(256) NOT NULL UNIQUE
 			)'
             );
             $stmt->execute();
