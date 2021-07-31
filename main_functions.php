@@ -173,8 +173,8 @@ function update_user($userdata)
                 $stmt->bind_param($binds, ...$params);
                 $stmt->execute();
                 $stmt->close();
-                if (isset($userdata['mail'])) {
-                    $_SESSION['mail'] = $userdata['mail'];
+                foreach ($userdata as $key => $value) {
+                    $_SESSION[$key] = $value;
                 }
                 return true;
             }
@@ -220,6 +220,55 @@ function get_user($mail = null)
                 $user = $result->fetch_assoc();
                 $stmt->close();
                 return $user;
+            }
+            return null;
+        }
+    ));
+}
+
+/**
+ * Get users.
+ *
+ * @since 0.0.1
+ *
+ * @param string $search Optional, all users if not specified. All matching if specified.
+ *
+ * @return array $user {
+ * @type   int id
+ * @type   string mail
+ * @type   string first_name
+ * @type   string last_name
+ * @type   int level
+ *         }
+ * null on failure.
+ */
+
+function get_users($search = null)
+{
+    if (!$search) {
+        $search = '';
+    }
+    $search = mb_strtolower('%' . $search . '%');
+
+    return(sql(
+        function ($conn) use ($search) {
+            $stmt = $conn->prepare(
+                "SELECT id, mail, first_name, last_name, level FROM users
+                WHERE mail like LOWER(?)
+                OR first_name like LOWER(?)
+                OR last_name like LOWER(?)"
+            );
+            if ($stmt) {
+                $stmt->bind_param('sss', $search, $search, $search);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                while ($user = $result->fetch_assoc()) {
+                    $users[] = $user;
+                }
+                $stmt->close();
+                if (!empty($users)) {
+                    return $users;
+                }
             }
             return null;
         }
@@ -359,17 +408,17 @@ function get_field($id)
  *
  * @since 0.0.1
  *
- * @param string @name
+ * @param string $url
  *
  * @return int $id on success, null on failure
  */
-function create_canonical($name)
+function create_canonical($url)
 {
     return sql(
-        function ($conn) use ($name) {
-            $stmt = $conn->prepare("INSERT INTO canonicals (name) VALUES ( ? )");
+        function ($conn) use ($url) {
+            $stmt = $conn->prepare("INSERT INTO canonicals (url) VALUES ( ? )");
             if ($stmt) {
-                $stmt->bind_param('s', $name);
+                $stmt->bind_param('s', $url);
                 $stmt->execute();
                 $lastid = $stmt->insert_id;
                 $stmt->close();
@@ -386,17 +435,17 @@ function create_canonical($name)
  *
  * @since 0.0.1
  *
- * @param string @name
+ * @param string $url
  *
  * @return array {id}
  */
-function get_canonical($name)
+function get_canonical($url)
 {
     return sql(
-        function ($conn) use ($name) {
-            $stmt = $conn->prepare("SELECT id FROM canonicals WHERE name = ?");
+        function ($conn) use ($url) {
+            $stmt = $conn->prepare("SELECT id FROM canonicals WHERE url = ?");
             if ($stmt) {
-                $stmt->bind_param('s', $name);
+                $stmt->bind_param('s', $url);
                 $stmt->execute();
                 $result = $stmt->get_result();
                 $canonical = $result->fetch_assoc();
@@ -489,6 +538,85 @@ function get_survey($name)
     ));
 }
 
+
+/**
+ * Get Surveys
+ *
+ * @since 0.0.1
+ *
+ * @param string $search Optional. If not set, retrieve all.
+ *
+ * @return mixed $survey array of survey arrays.
+ */
+
+function get_surveys($search = null)
+{
+    if (!$search) {
+        $search = "%%";
+    } else {
+        $search = '%' . mb_strtolower($search) . '%';
+    }
+    return(sql(
+        function ($conn) use ($search) {
+            $stmt = $conn->prepare(
+                "SELECT surveys.id, id_canonical, name, description, max_entries, report_at, status, fields, url
+                FROM surveys LEFT JOIN canonicals on id_canonical = canonicals.id
+                WHERE name like LOWER(?)
+                OR description like LOWER(?)"
+            );
+            if ($stmt) {
+                $stmt->bind_param('ss', $search, $search);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                while ($survey = $result->fetch_assoc()) {
+                    $surveys[] = $survey;
+                }
+                $stmt->close();
+                if (!empty($surveys)) {
+                    return($surveys);
+                }
+            }
+            return null;
+        }
+    ));
+}
+
+/**
+ * Get Submissions
+ *
+ * @since 0.0.1
+ *
+ * @param int $survey_id if of survey.
+ *
+ * @return mixed $submissions array of submissions.
+ */
+
+function get_submissions($survey_id)
+{
+    return(sql(
+        function ($conn) use ($survey_id) {
+            $stmt = $conn->prepare(
+                "SELECT id, id_canonical, id_field, original, value 
+                FROM submissions WHERE name id = ?"
+            );
+            if ($stmt) {
+                $stmt->bind_param('i', $survey_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $result = $stmt->get_result();
+                while ($submission = $result->fetch_assoc()) {
+                    $submissions[] = $submission;
+                }
+                $stmt->close();
+                if (!empty($submissions)) {
+                    return($submissions);
+                }
+            }
+            return null;
+        }
+    ));
+}
+
 /**
  * Save config.
  *
@@ -530,4 +658,25 @@ function e_mail($to, $subject, $message, $bcc = null)
         $headers = 'BCC: ' . $bcc . "\r\n";
     }
     mail($to, $subject, $message, $headers);
+}
+
+/**
+ * Generate Password
+ *
+ * @param int $length
+ *
+ * @return string $str
+ */
+function generate_password($length = 20)
+{
+    $chars =  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' .
+              '0123456789`-=~!@#$%^&*()_+,./<>?;:[]{}\|';
+    $str = '';
+    $max = strlen($chars) - 1;
+
+    for ($i = 0; $i < $length; $i++) {
+        $str .= $chars[random_int(0, $max)];
+    }
+
+    return $str;
 }
