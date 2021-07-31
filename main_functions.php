@@ -167,12 +167,15 @@ function update_user($userdata)
         array_push($params, $_SESSION['user_id']);
         $binds .= "i";
 
-        return sql(function ($conn) use ($query, $binds, $params) {
+        return sql(function ($conn) use ($query, $binds, $params, $userdata) {
             $stmt = $conn->prepare($query);
             if ($stmt) {
                 $stmt->bind_param($binds, ...$params);
                 $stmt->execute();
                 $stmt->close();
+                if (isset($userdata['mail'])) {
+                    $_SESSION['mail'] = $userdata['mail'];
+                }
                 return true;
             }
 
