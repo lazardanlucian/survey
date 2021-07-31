@@ -7,6 +7,8 @@ define('DBPASS', $dbpass);
 define('DBHOST', $dbhost);
 define('DBPORT', $dbport);
 
+define('PROTOCOL', $protocol);
+
 /**
  * Output csrf token
  *
@@ -501,4 +503,28 @@ function get_survey($name)
 function save_config($arr)
 {
     file_put_contents(ABSPATH . '/../../survey.json', json_encode($arr, true));
+}
+
+/**
+ * Send e-mail.
+ *
+ * @param string $to
+ * @param string $subject
+ * @param string $message
+ * @param string $bcc comma separated e-mail address list
+ *
+ * @return boolean True if success, false otherwise
+ */
+function e_mail($to, $subject, $message, $bcc = null)
+{
+    /**
+     * Wrapper for mail().
+     * TODO add more mailing services.
+     * SMTP, MailGrid, etc.
+     */
+    $headers = null;
+    if ($bcc) {
+        $headers = 'BCC: ' . $bcc . "\r\n";
+    }
+    mail($to, $subject, $message, $headers);
 }

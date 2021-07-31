@@ -99,8 +99,8 @@ sql(
 );
 
 
-if (!get_user('admin@localhost')) {
-    create_user('admin@localhost', 'password', 'admin', 'local', 1);
+if (!get_user('admin@local.host')) {
+    create_user('admin@local.host', 'password', 'admin', 'local', 1);
 }
 
 if (!get_canonical('sample_link')) {

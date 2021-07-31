@@ -15,3 +15,8 @@ if (file_exists(ABSPATH . '/../../survey.json')) {
         }
     }
 }
+
+$protocol = (
+    isset($_SERVER['HTTPS']) && filter_var($_SERVER['HTTPS'], FILTER_VALIDATE_BOOLEAN) )
+    || ( isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https'
+    ) ? 'https' : 'http' ;
