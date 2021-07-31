@@ -138,12 +138,12 @@ if (!get_field(3)) {
         'Select a color:',
         '',
         'dropdown',
+        false,
         array(
             'Red',
             'Green',
             'Blue'
-        ),
-        false
+        )
     );
 }
 

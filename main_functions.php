@@ -538,6 +538,40 @@ function get_survey($name)
     ));
 }
 
+/**
+ * Get Survey by id.
+ *
+ * @since 0.0.1
+ *
+ * @param int $id
+ *
+ * @return mixed $survey Return survey definition, on failure return null.
+ */
+
+function get_survey_by_id($id)
+{
+    return(sql(
+        function ($conn) use ($id) {
+            $stmt = $conn->prepare(
+                "SELECT id, id_canonical, name, description, max_entries, report_at, status, fields 
+                FROM surveys WHERE id like ?"
+            );
+            if ($stmt) {
+                $stmt->bind_param('i', $id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $survey = $result->fetch_assoc();
+                $stmt->close();
+                if ($survey) {
+                    $survey['fields'] = json_decode($survey['fields'], 1);
+                    return $survey;
+                }
+            }
+            return null;
+        }
+    ));
+}
+
 
 /**
  * Get Surveys
@@ -617,6 +651,26 @@ function get_submissions($survey_id)
     ));
 }
 
+function create_submission($id_survey, $id_canonical, $id_field, $original, $value){
+    return(sql(
+        function ($conn) use($id_survey, $id_canonical, $id_field, $original, $value) {
+            $stmt = $conn->prepare(
+                "INSERT INTO submissions (id_survey, id_canonical, id_field, original, value)
+                VALUES (?, ?, ?, ?, ?)"
+            );
+            if ($stmt) {
+                $stmt->bind_param('iiiss', $id_survey, $id_canonical, $id_field, $original, $value);
+                $stmt->execute();
+                $last_id = $stmt->insert_id;
+                $stmt->close();
+                return $last_id;
+            }
+            $stmt->close();
+            return false;
+        }
+    ));
+}
+
 /**
  * Save config.
  *
@@ -679,4 +733,24 @@ function generate_password($length = 20)
     }
 
     return $str;
+}
+
+/**
+ * Filter the canonical url of the survey.
+ *
+ * @param int $type
+ * @param string $var_name
+ *
+ * @return mixed false or null on failure, string on success.
+ */
+function filter_input_survey_url($type, $var_name)
+{
+    return(
+        filter_input(
+            $type,
+            $var_name,
+            FILTER_VALIDATE_REGEXP,
+            array('options' => array( 'regexp' => '/^[a-zA-Z0-9_-]+$/'))
+        )
+    );
 }

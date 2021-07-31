@@ -16,12 +16,7 @@ $errors = array(
 
 $survey_name = filter_input(INPUT_POST, 'survey_name');
 $survey_description = filter_input(INPUT_POST, 'survey_description');
-$survey_url = filter_input(
-    INPUT_POST,
-    'survey_url',
-    FILTER_VALIDATE_REGEXP,
-    array('options' => array( 'regexp' => '/^[a-zA-Z0-9_-]+$/'))
-);
+$survey_url = filter_input_survey_url(INPUT_POST, 'survey_url');
 $survey_status = filter_input(INPUT_POST, 'survey_status', FILTER_VALIDATE_INT);
 
 if ($_SERVER['REQUEST_METHOD'] === "POST") {
@@ -34,7 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
     }
 
     if (!$survey_url) {
-        $errors['survey_url'] .= '<p class="ierror">Url can only contain characters, numbers, hyphens and underscores</p>';
+        $errors['survey_url'] .= '<p class="ierror">Url can only contain characters, 
+        numbers, hyphens and underscores</p>';
     }
 
     if (!$survey_status && $survey_status !== 0) {
