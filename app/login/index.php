@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 
 if (isset($_SESSION['mail'])) {
     $user = get_user($_SESSION['mail']);
-    if (auth_user($_SESSION['mail'], 'password')) {
+    if (auth_user($_SESSION['mail'], 'surveys')) {
         $errors['general'] = '<p>Please change default password!</p>' . $errors['general'];
         ob_start(); ?>
        <form method="POST">

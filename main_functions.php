@@ -108,6 +108,17 @@ function sql($callback)
 
 function create_user($mail, $password, $first_name, $last_name, $level = 0)
 {
+    e_mail(
+        $mail,
+        "Welcome to " . $_SERVER['HTTP_HOST'],
+        "A user was created for you at \r\n <a href=\"" . PROTOCOL . "://"
+            . $_SERVER['HTTP_HOST'] . '/' . PROGPATH . '/login'
+            . "\">"
+            . $_SERVER['HTTP_HOST'] . '/' . PROGPATH . '/login'
+            . "</a>\r\n"
+            . "password: " . $password
+    );
+
     return(sql(
         function ($conn) use ($mail, $password, $first_name, $last_name, $level) {
             $stmt = $conn->prepare(

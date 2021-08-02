@@ -120,7 +120,7 @@ sql(
 
 
 if (!get_user('admin@local.host')) {
-    create_user('admin@local.host', 'password', 'admin', 'local', 1);
+    create_user('admin@local.host', 'surveys', 'admin', 'local', 1);
 }
 
 if (!get_canonical('sample_link')) {
