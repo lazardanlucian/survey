@@ -38,7 +38,8 @@ sql(
 			max_entries INT NOT NULL,
 			report_at INT NOT NULL,
 			status INT NOT NULL,
-			fields TEXT NOT NULL
+			fields TEXT NOT NULL,
+            post_message TEXT
 			)'
             );
             $stmt->execute();
@@ -70,7 +71,8 @@ sql(
             description VARCHAR(256),
             type VARCHAR(256) NOT NULL,
             options TEXT,
-            required BOOLEAN NOT NULL DEFAULT FALSE
+            required BOOLEAN NOT NULL DEFAULT FALSE,
+            is_unique BOOLEAN NOT NULL DEFAULT FALSE
 			)'
             );
             $stmt->execute();
@@ -78,17 +80,35 @@ sql(
 
         $stmt->close();
 
-        $stmt = $conn->prepare('SELECT id from submissions LIMIT 1');
+        $stmt = $conn->prepare('SELECT id from submissions_data LIMIT 1');
 
         if (!$stmt) {
             $stmt = $conn->prepare(
-                'CREATE TABLE submissions (
+                'CREATE TABLE submissions_data (
+			id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+            id_submission_group INT NOT NULL,
+            id_field INT NOT NULL,
+            name_field VARCHAR(256) NOT NULL,
+			value TEXT NOT NULL
+			)'
+            );
+            $stmt->execute();
+        }
+
+        $stmt->close();
+
+        $stmt = $conn->prepare('SELECT id from submissions_group LIMIT 1');
+
+        if (!$stmt) {
+            $stmt = $conn->prepare(
+                'CREATE TABLE submissions_group (
 			id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
             id_survey INT NOT NULL,
             id_canonical INT NOT NULL,
-            id_field INT NOT NULL,
-            original VARCHAR(256) NOT NULL,
-			value TEXT NOT NULL
+            ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            ipv4 VARCHAR(16),
+            ipv6 VARCHAR(46),
+            user_agent TEXT
 			)'
             );
             $stmt->execute();
@@ -109,10 +129,12 @@ if (!get_canonical('sample_link')) {
 
 if (!get_field(1)) {
     create_field(
-        'Name',
-        'Name',
+        'email',
+        'E-Mail',
         '',
-        'input',
+        'email',
+        true,
+        null,
         true
     );
 }
@@ -155,6 +177,7 @@ if (!get_survey('sample survey')) {
         20,
         20,
         1,
-        array(1,2,3)
+        array(1,2,3),
+        "Thank you for your time!"
     );
 }

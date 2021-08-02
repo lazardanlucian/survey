@@ -331,38 +331,37 @@ function auth_user($mail, $password)
  *
  * @return int $id on success, null on failure
  */
-function create_field($name, $label, $description, $type, $required = false, $options = null)
+function create_field($name, $label, $description, $type, $required = false, $options = null, $is_unique = null)
 {
+    if (!$options) {
+        $options = array();
+    }
+
+    $is_unique = $is_unique ? true : false;
+    $required = $required ? true : false;
     return sql(
-        function ($conn) use ($name, $label, $description, $type, $required, $options) {
-            if ($options) {
-                $stmt = $conn->prepare("INSERT INTO fields (name, label, description, type, required, options) 
-                VALUES ( ?,?,?,?,?,? )");
-            } else {
-                $stmt = $conn->prepare("INSERT INTO fields (name, label, description, type, required) 
-                VALUES ( ?,?,?,?,? )");
-            }
+        function ($conn) use ($name, $label, $description, $type, $required, $options, $is_unique) {
+            $stmt = $conn->prepare("INSERT INTO fields (name, label, description, type, required, options, is_unique) 
+            VALUES ( ?,?,?,?,?,?,? )");
+
             if ($stmt) {
-                if ($options) {
-                    $json_options = json_encode($options, true);
-                    $stmt->bind_param(
-                        'ssssis',
-                        $name,
-                        $label,
-                        $description,
-                        $type,
-                        $required,
-                        $json_options
-                    );
-                } else {
-                    $stmt->bind_param('ssssi', $name, $label, $description, $type, $required);
-                }
+                $json_options = json_encode($options, true);
+                $stmt->bind_param(
+                    'ssssisi',
+                    $name,
+                    $label,
+                    $description,
+                    $type,
+                    $required,
+                    $json_options,
+                    $is_unique
+                );
                 $stmt->execute();
                 $lastid = $stmt->insert_id;
                 $stmt->close();
                 return $lastid;
             }
-
+            var_dump($conn->error);
             $stmt->close();
             return null;
         }
@@ -382,7 +381,7 @@ function get_field($id)
 {
     return sql(
         function ($conn) use ($id) {
-            $stmt = $conn->prepare("SELECT id, name, label, description, type, required, options
+            $stmt = $conn->prepare("SELECT id, name, label, description, type, required, options, is_unique
             FROM fields WHERE id = ?");
             if ($stmt) {
                 $stmt->bind_param('i', $id);
@@ -470,29 +469,50 @@ function get_canonical($url)
  * @param int    $report_at    Send report at this interval.
  * @param int    $status       Starts with 0 = disabled, 1 = enabled.
  * @param array  $fields       Fields array.
+ * @param string $post_message Optional. Message shown after survey is complete.
  *
  * @return int $id on succes, null on failure.
  */
 
-function create_survey($id_canonical, $name, $description, $max_entries, $report_at, $status, $fields)
-{
+function create_survey(
+    $id_canonical,
+    $name,
+    $description,
+    $max_entries,
+    $report_at,
+    $status,
+    $fields,
+    $post_message = null
+) {
+    $post_message = $post_message ? $post_message : '';
     return sql(
-        function ($conn) use ($id_canonical, $name, $description, $max_entries, $report_at, $status, $fields) {
+        function ($conn) use (
+            $id_canonical,
+            $name,
+            $description,
+            $max_entries,
+            $report_at,
+            $status,
+            $fields,
+            $post_message
+        ) {
             $stmt = $conn->prepare(
-                "INSERT INTO surveys (id_canonical, name, description, max_entries, report_at, status, fields) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO surveys 
+                (id_canonical, name, description, max_entries, report_at, status, fields, post_message) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             );
             if ($stmt) {
                 $json_fields = json_encode($fields, 1);
                 $stmt->bind_param(
-                    'issiiis',
+                    'issiiiss',
                     $id_canonical,
                     $name,
                     $description,
                     $max_entries,
                     $report_at,
                     $status,
-                    $json_fields
+                    $json_fields,
+                    $post_message
                 );
                 $stmt->execute();
                 $lastid = $stmt->insert_id;
@@ -519,7 +539,7 @@ function get_survey($name)
     return(sql(
         function ($conn) use ($name) {
             $stmt = $conn->prepare(
-                "SELECT id, id_canonical, name, description, max_entries, report_at, status, fields 
+                "SELECT id, id_canonical, name, description, max_entries, report_at, status, fields, post_message
                 FROM surveys WHERE name like ?"
             );
             if ($stmt) {
@@ -559,7 +579,7 @@ function get_surveys($search = null)
     return(sql(
         function ($conn) use ($search) {
             $stmt = $conn->prepare(
-                "SELECT surveys.id, id_canonical, name, description, max_entries, report_at, status, fields, url
+                "SELECT surveys.id, id_canonical, name, description, max_entries, report_at, status, fields, post_message, url
                 FROM surveys LEFT JOIN canonicals on id_canonical = canonicals.id
                 WHERE name like LOWER(?)
                 OR description like LOWER(?)"
@@ -597,7 +617,7 @@ function get_submissions($survey_id)
         function ($conn) use ($survey_id) {
             $stmt = $conn->prepare(
                 "SELECT id, id_canonical, id_field, original, value 
-                FROM submissions WHERE name id = ?"
+                FROM submissions WHERE id = ?"
             );
             if ($stmt) {
                 $stmt->bind_param('i', $survey_id);
@@ -632,7 +652,7 @@ function get_survey_by_id($id)
     return(sql(
         function ($conn) use ($id) {
             $stmt = $conn->prepare(
-                "SELECT id, id_canonical, name, description, max_entries, report_at, status, fields 
+                "SELECT id, id_canonical, name, description, max_entries, report_at, status, fields, post_message
                 FROM surveys WHERE id like ?"
             );
             if ($stmt) {
@@ -651,15 +671,44 @@ function get_survey_by_id($id)
     ));
 }
 
-function create_submission($id_survey, $id_canonical, $id_field, $original, $value){
+function create_submission_group($id_survey, $id_canonical)
+{
     return(sql(
-        function ($conn) use($id_survey, $id_canonical, $id_field, $original, $value) {
+        function ($conn) use ($id_survey, $id_canonical) {
+            $user_agent = $_SERVER['HTTP_USER_AGENT'];
+            $ip = $_SERVER['REMOTE_ADDR'];
+
+            $ipv4 = filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4);
+            $ipv6 = filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6);
+
             $stmt = $conn->prepare(
-                "INSERT INTO submissions (id_survey, id_canonical, id_field, original, value)
+                "INSERT INTO submissions_group (id_survey, id_canonical, user_agent, ipv4, ipv6)
                 VALUES (?, ?, ?, ?, ?)"
             );
             if ($stmt) {
-                $stmt->bind_param('iiiss', $id_survey, $id_canonical, $id_field, $original, $value);
+                $stmt->bind_param('iisss', $id_survey, $id_canonical, $user_agent, $ipv4, $ipv6);
+                $stmt->execute();
+                $last_id = $stmt->insert_id;
+                $stmt->close();
+                return $last_id;
+            }
+            var_dump($conn->error);
+            $stmt->close();
+            return false;
+        }
+    ));
+}
+
+function create_submission_data($id_group, $id_field, $name_field, $value)
+{
+    return(sql(
+        function ($conn) use ($id_group, $id_field, $name_field, $value) {
+            $stmt = $conn->prepare(
+                "INSERT INTO submissions_data (id_submission_group, id_field, name_field, value)
+                VALUES (?, ?, ?, ?)"
+            );
+            if ($stmt) {
+                $stmt->bind_param('iiss', $id_group, $id_field, $name_field, $value);
                 $stmt->execute();
                 $last_id = $stmt->insert_id;
                 $stmt->close();
@@ -669,6 +718,74 @@ function create_submission($id_survey, $id_canonical, $id_field, $original, $val
             return false;
         }
     ));
+}
+
+
+function get_survey_data($id_survey, $field_id = null, $userdata = null)
+{
+    $groups = sql(
+        function ($conn) use ($id_survey) {
+            $stmt = $conn->prepare(
+                "SELECT * FROM submissions_group WHERE id_survey like ?"
+            );
+            if ($stmt) {
+                $stmt->bind_param('i', $id_survey);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                while ($data = $result->fetch_assoc()) {
+                        $survey_data[] = $data;
+                }
+                $stmt->close();
+                if ($survey_data) {
+                    return $survey_data;
+                }
+            }
+            $stmt->close();
+            return null;
+        }
+    );
+
+    $submissions_data = array();
+
+    foreach ($groups as $group) {
+        $id_group = $group['id'];
+        $submission_data = sql(
+            function ($conn) use ($id_group, $field_id, $userdata) {
+                if ($field_id && $userdata) {
+                    $stmt = $conn->prepare(
+                        "SELECT * FROM submissions_data WHERE id_submission_group like ? and id_field = ? and value like ?"
+                    );
+                } else {
+                    $stmt = $conn->prepare(
+                        "SELECT * FROM submissions_data WHERE id_submission_group like ?"
+                    );
+                }
+                if ($stmt) {
+                    if ($field_id && $userdata) {
+                        $stmt->bind_param('iis', $id_group, $field_id, $userdata);
+                    } else {
+                        $stmt->bind_param('i', $id_group);
+                    }
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    while ($data = $result->fetch_assoc()) {
+                            $survey_data[] = $data;
+                    }
+                    $stmt->close();
+                    if (isset($survey_data)) {
+                        return $survey_data;
+                    }
+                }
+                return null;
+            }
+        );
+
+        if ($submission_data) {
+            array_push($submissions_data, $submission_data);
+        }
+    }
+
+        return $submissions_data;
 }
 
 /**
